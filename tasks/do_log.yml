@@ -1,0 +1,14 @@
+---
+- name: Opensips | Create syslog
+  become: true
+  file:
+    path: "{{ opensips_log_path }}"
+    state: touch
+
+- name: Opensips | Enable syslog
+  become: true
+  lineinfile:
+    dest: /etc/rsyslog.conf
+    line: local0.*      -{{ opensips_log_path }}
+  notify: Restart rsyslog
+  when: opensips_enable_syslog

@@ -1,0 +1,14 @@
+---
+
+- include_tasks: setup_debian.yml
+  when: ansible_os_family == 'Debian'
+
+- include_tasks: do_log.yml
+
+- include_tasks: control_panel_installation.yml 
+
+- name: Opensips | Enable service
+  service: name=opensips enabled=yes
+
+- name: Opensips | Enable service
+  service: name=apache2 enabled=yes

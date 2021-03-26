@@ -1,2 +1,2 @@
 # ansible-role-opensips
-Auto deploy opensips as sip proxy
+Auto deploy opensips on debian

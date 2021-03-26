@@ -1,0 +1,87 @@
+---
+
+opensips_bind_host: "{{ ansible_default_ipv4.address }}"
+opensips_bind_port: "5060"
+opensips_db_host: "{{ ansible_default_ipv4.address }}"
+opensips_db_port: "5432"
+opensips_db_engine: "PGSQL"
+opensips_db_name: "opensips"
+opensips_db_user: "opensips"
+opensips_db_pass: "opensipsrw"
+opensips_db_root_user: "postgres"
+opensips_db_root_pass: "postgres"
+opensips_db_connect_engine: "postgres"
+opensips_db_url: "{{ opensips_db_connect_engine }}://{{ opensips_db_user }}:{{ opensips_db_pass }}@{{ opensips_db_host }}/{{ opensips_db_name }}"
+opensips_create_db: true
+opensips_install_conf: true
+opensips_manage_repo: true
+opensips_conf_dir: "/etc/opensips/"
+opensips_log_path: "/var/log/opensips.log"
+opensips_enable_syslog: true
+opensips_cp_repo: "https://github.com/OpenSIPS/opensips-cp.git"
+opensips_cp_cp_version: "8.2.4"
+opensips_cp_path: "/var/www/html/opensips-cp"
+opensips_apache_dir: "/etc/apache2/"
+opensips_apache_conf_file: "apache2.conf"
+opensips_db_script_dir: "../templates/scripts/"
+opensips_config_template_dir: "../templates/config/"
+opensips_db_script_file: "create_column.sql"
+opensips_conf_files:
+  - opensips.cfg
+  - opensipsctlrc
+
+opensips_debian_packages:
+  - python3
+  - python-pip
+  - python3-pip
+  - python3-setuptools
+  - python-setuptools
+  - apache2
+  - libapache2-mod-php 
+  - php-curl
+  - php
+  - php-mysql
+  - php-gd
+  - php-pear
+  - php-cli
+  - php-apcu
+  - php-pgsql
+  - opensips
+  - opensips-b2bua-module
+  - opensips-berkeley-module
+  - opensips-carrierroute-module
+  - opensips-cgrates-module
+  - opensips-compression-module
+  - opensips-console
+  - opensips-cpl-module
+  - opensips-dbhttp-module
+  - opensips-dialplan-module
+  - opensips-emergency-module
+  - opensips-geoip-module
+  - opensips-http-modules
+  - opensips-identity-module
+  - opensips-jabber-module
+  - opensips-json-module
+  - opensips-ldap-modules
+  - opensips-lua-module
+  - opensips-memcached-module
+  - opensips-mysql-module
+  - opensips-mongodb-module
+  - opensips-perl-modules
+  - opensips-postgres-module
+  - opensips-presence-modules
+  - opensips-rabbitmq-modules
+  - opensips-radius-modules
+  - opensips-redis-module
+  - opensips-regex-module
+  - opensips-restclient-module
+  - opensips-sctp-module
+  - opensips-siprec-module
+  - opensips-snmpstats-module
+  - opensips-sqlite-module 
+  - opensips-tls-module
+  - opensips-wss-module
+  - opensips-tlsmgm-module
+  - opensips-unixodbc-module
+  - opensips-xmlrpc-module
+  - opensips-xmpp-module

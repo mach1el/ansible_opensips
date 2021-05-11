@@ -8,7 +8,7 @@ auto_aliases=no
 disable_503_translation=yes
 
 listen=udp:{{ opensips_bind_host }}:{{ opensips_bind_port }}
-listen=ws:{{ opensips_bind_host }}:8888
+listen=ws:{{ opensips_bind_host }}:8989
 listen=hep_udp:{{ opensips_bind_host }}:9191
 
 ####### Modules Section ########
@@ -93,12 +93,12 @@ modparam("dialog", "table_name", "dialog")
 modparam("dialog", "enable_stats", 1)
 modparam("dialog", "profiles_with_value","caller")
 modparam("dialog", "dlg_match_mode", 2)
-modparam("dialog", "default_timeout", 21600)
+modparam("dialog", "default_timeout",600)
 modparam("dialog", "db_mode", 1)
 
 #### ACCounting module
 loadmodule "acc.so"
-modparam("acc", "early_media", 1)
+modparam("acc", "early_media", 0)
 modparam("acc", "report_cancels", 1)
 modparam("acc", "detect_direction", 0)
 modparam("acc", "log_level", 2)
@@ -111,7 +111,7 @@ modparam("acc", "extra_fields", "db: src_ip; dst_ip; exten")
 loadmodule "load_balancer.so"
 modparam("load_balancer", "db_url", "{{ opensips_db_url }}")
 modparam("load_balancer", "db_table", "load_balancer")
-modparam("load_balancer", "probing_reply_codes", "501, 503, 403")
+modparam("load_balancer", "probing_reply_codes", "501, 503, 403, 404")
 modparam ("load_balancer", "probing_verbose", 1)
 
 #### Proto HEP
@@ -122,6 +122,17 @@ loadmodule "siptrace.so"
 modparam("siptrace", "trace_on", 1)
 # modparam("siptrace", "trace_id","[tid]uri={{ opensips_db_url }};table=sip_trace;")
 modparam("siptrace", "trace_id", "[traceid]uri=hep:homer")
+
+#### RTP PROXY
+loadmodule "rtpproxy.so"
+modparam("rtpproxy", "rtpproxy_sock", "udp:{{ opensips_bind_host }}:7890")
+modparam("rtpproxy", "rtpproxy_autobridge", 1)
+
+#### USERBLACKLIST
+loadmodule "userblacklist.so"
+modparam("userblacklist","db_url", "{{ opensips_db_url }}")
+modparam("userblacklist", "db_table", "userblacklist")
+
 
 ####### Routing Logic ########
 
@@ -145,7 +156,7 @@ route{
   if (has_totag()) {
     if (loose_route()) {
       if (is_method("BYE")) {
-        do_accounting("db","cdr");
+        xlog("-------------------- CALL ENDED,$ru,$ci,$fn,$fu\n");
       } else if (is_method("INVITE")) {
         record_route();
       }
@@ -168,7 +179,7 @@ route{
 
   # CANCEL processing
   if (is_method("CANCEL")) {
-    sip_trace("traceid","M","sip");
+    # sip_trace("traceid","M","sip");
     xlog("-------------------- REPORT: CANCEL Reply with $T_reply_code\n");
     xlog("L_WARN","-------------------- CANCEL CALL,$ru,$ci,$fn,$fu\n");
     if (t_check_trans()) {
@@ -211,11 +222,12 @@ route{
   if (is_method("INVITE")) {
     # sip_trace("$var(trace_id)", "d", "sip|xlog", "$var(user)");
     # sip_trace("traceid","M","sip");
-    sip_trace("traceid", "m", "xlog|sip|rest", "$fu");
+    # sip_trace("traceid", "m", "xlog|sip|rest", "$fu");
+
     $acc_extra(src_ip) = $si;
+    $acc_extra(caller) = $fU;
     create_dialog("Pp");
     do_accounting("db|db", "cdr|missed");
-    xlog("-------------------- REPORT: INVITE Reply with $T_reply_code\n");
     xlog("-------------------- CALL,$ru,$ci,$fn,$fu\n");
     route(ob);
   }
@@ -266,44 +278,20 @@ route[ob] {
     send_reply("403","Destination not found");
     exit;
   }
+  
   $acc_extra(exten) = $rU;
 
-  if ( !load_balance("1","$avp(lb_res)") ) {
-      xlog("-------------------- REPORT: LB failed with code $T_reply_code .Service is full\n");
-      send_reply("503","Service full");
-      # $json(db_data) := "{'from_tag' : '',
-      #                     'callid' : '',
-      #                     'sip_code' : '500',
-      #                     'sip_reason' : 'Service full',
-      #                     'src_ip' : '',
-      #                     'caller' : '',
-      #                     'callee' : ''
-      #                     }";
-      # $json(db_data/from_tag) = $ft;
-      # $json(db_data/callid) = $ci;
-      # $json(db_data/src_ip) = $si;
-      # $json(db_data/caller) = $fu;
-      # $json(db_data/callee) = $ru;
-      # $var(rc) = rest_post("http://localhost:5000/insert_db",
-      #                     "$json(db_data)","application/json" , "$var(body)", "$var(ct)", "$var(rcode)");
-      exit;
+  if (!check_blacklist("userblacklist")) {
+        xlog("-------------------- NOTICE: $rU is blacklisted\n");
+        sl_send_reply("504", "Blacklisted");
+        exit;
   }
 
+  if ( !load_balance("1","$avp(lb_res)") ) {
   xlog("-------------------- Selected destination is: <$dd> for <$ru>,<$ci>\n");
-  # $avp(des) = $dd;
   $acc_extra(dst_ip) = $dd;
-  # $var(rc) = rest_get("http://localhost:5000/lb/data/gateways?gw=$dd&prefix=$avp(lb_res)",
-  #                     "$var(data)",
-  #                     "$var(ct)",
-  #                     "$var(rcode)"
-  #                     );
-  # $acc_extra(prefix) = $avp(lb_res);
-  # $json(data) := $var(data);
-  # $acc_extra(max) = $json(data[0]/max);
-  # $acc_extra(loading) = $json(data[0]/load);
-
   t_on_failure("GW_FAILOVER");
-    route(relay);
+  route(relay);
 }
 
 route[relay] {
@@ -311,10 +299,12 @@ route[relay] {
     t_on_branch("per_branch_ops");
     t_on_reply("handle_nat");
     t_on_failure("missed_call");
-  } 
+  }
+
   if (!t_relay()) {
     send_reply("503","Internal Error");
   };
+
   xlog("-------------------- REPORT: RELAY Reply with $T_reply_code\n");
   exit;
 }
@@ -338,7 +328,6 @@ failure_route[missed_call] {
 
 failure_route[GW_FAILOVER] {
   xlog("-------------------- REPORT: FAILED Reply with $T_reply_code\n");
-  do_accounting("db","failed");
   if (t_was_cancelled()) {
     exit;
   }

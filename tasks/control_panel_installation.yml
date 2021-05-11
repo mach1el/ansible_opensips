@@ -24,6 +24,13 @@
   become: true
   shell: psql -h {{ opensips_db_host }} -U {{ opensips_db_root_user }} -d opensips < config/db_schema.pgsql chdir={{ opensips_cp_path }}
 
+- name: Opensips | local.inc CDR config.
+  become: true
+  template:
+    src: "{{ opensips_config_template_dir }}/local.inc.php.j2"
+    dest: "{{ opensips_cp_path }}/config/tools/system/cdrviewer/local.inc.php"
+    backup: true
+
 - name: Opensips | DB.INC config.
   become: true
   template:
@@ -31,10 +38,10 @@
     dest: "{{ opensips_cp_path }}/config/db.inc.php"
     backup: true
 
-- name: Opensips | local.inc CDR config.
+- name: Opensips | boxes.global.inc config.
   become: true
   template:
-    src: "{{ opensips_config_template_dir }}/local.inc.php.j2"
-    dest: "{{ opensips_cp_path }}/config/tools/system/cdrviewer/local.inc.php"
+    src: "{{ opensips_config_template_dir }}/boxes.global.inc.php.j2"
+    dest: "{{ opensips_cp_path }}/config/boxes.global.inc.php"
     backup: true
   notify: Restart apache2

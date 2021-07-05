@@ -296,45 +296,50 @@ route[ob] {
 
 route[relay] {
   if (is_method("INVITE")) {
-    t_on_branch("per_branch_ops");
+    t_on_branch("handle_nat");
     t_on_reply("handle_nat");
     t_on_failure("missed_call");
+
+  } else if (is_method("BYE|CANCEL")) {
+    rtpproxy_unforce();
   }
 
   if (!t_relay()) {
-    send_reply("503","Internal Error");
+    send_reply("500","Internal Error");
   };
-
-  xlog("-------------------- REPORT: RELAY Reply with $T_reply_code\n");
   exit;
 }
 
 
 branch_route[per_branch_ops] {
-  xlog("L_INFO","-------------------- new branch at $ru\n");
+  xlog("-------------------- new branch at $ru\n");
+}
+
+branch_route[handle_nat] {
+
+  if (!is_method("INVITE") || !has_body("application/sdp"))
+    return;
+  rtpproxy_offer();
 }
 
 onreply_route[handle_nat] {
+
   fix_nated_contact();
+  if (!has_body("application/sdp"))
+    return;
+
+  rtpproxy_answer();
 }
 
 
 failure_route[missed_call] {
-  xlog("-------------------- REPORT: MISSED Reply with $T_reply_code\n");
-  if (t_was_cancelled()) {
+    if (t_was_cancelled()) {
     exit;
   }
 }
 
 failure_route[GW_FAILOVER] {
-  xlog("-------------------- REPORT: FAILED Reply with $T_reply_code\n");
   if (t_was_cancelled()) {
     exit;
   }
-
-  #if ( t_check_status("[56][0-9][0-9]") || (t_check_status("408") && t_local_replied("all") ) ) {
-  #  xlog("L_WARN","-------------------- REPORT: LB destination $avp(des) failed with code $T_reply_code\n");
-  #  t_reply("503","Error");
-  #}
 }
-

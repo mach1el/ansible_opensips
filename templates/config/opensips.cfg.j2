@@ -280,6 +280,7 @@ route[ob] {
   }
   
   $acc_extra(exten) = $rU;
+  #$rU = $(rU{s.substr,2,0});
 
   if (!check_blacklist("userblacklist")) {
         xlog("-------------------- NOTICE: $rU is blacklisted\n");

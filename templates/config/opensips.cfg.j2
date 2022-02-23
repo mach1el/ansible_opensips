@@ -4,10 +4,11 @@ log_level=2
 log_stderror=no
 log_facility=LOG_LOCAL0
 children=4
+mhomed=1
 auto_aliases=no
 disable_503_translation=yes
 
-listen=udp:{{ opensips_bind_host }}:{{ opensips_bind_port }}
+listen=udp:*:5060
 listen=ws:{{ opensips_bind_host }}:8989
 listen=hep_udp:{{ opensips_bind_host }}:9191
 
@@ -95,6 +96,7 @@ modparam("dialog", "profiles_with_value","caller")
 modparam("dialog", "dlg_match_mode", 2)
 modparam("dialog", "default_timeout",600)
 modparam("dialog", "db_mode", 1)
+modparam("dialog", "profiles_with_value", "g1; manual; auto; g3; g4")
 
 #### ACCounting module
 loadmodule "acc.so"
@@ -125,7 +127,7 @@ modparam("siptrace", "trace_id", "[traceid]uri=hep:homer")
 
 #### RTP PROXY
 loadmodule "rtpproxy.so"
-modparam("rtpproxy", "rtpproxy_sock", "udp:{{ opensips_bind_host }}:7890")
+modparam("rtpproxy", "rtpproxy_sock", "udp:0.0.0.0:7891")
 modparam("rtpproxy", "rtpproxy_autobridge", 1)
 
 #### USERBLACKLIST
@@ -220,16 +222,12 @@ route{
 
   # account only INVITEs
   if (is_method("INVITE")) {
-    # sip_trace("$var(trace_id)", "d", "sip|xlog", "$var(user)");
-    # sip_trace("traceid","M","sip");
-    # sip_trace("traceid", "m", "xlog|sip|rest", "$fu");
-
     $acc_extra(src_ip) = $si;
     $acc_extra(caller) = $fU;
-    create_dialog("Pp");
+    create_dialog("B");
     do_accounting("db|db", "cdr|missed");
     xlog("-------------------- CALL,$ru,$ci,$fn,$fu\n");
-    route(ob);
+    route(limit);
   }
 
   if (!is_myself("$rd")) {
@@ -268,7 +266,24 @@ route{
   exit;
 }
 
-route[ob] {
+route[limit] {
+  if ( $si == "10.10.94.123" )  {
+    #$var(group) = 1;
+    set_dlg_profile("g1","$si");
+    get_profile_size("g1","$si","$var(calls)");
+    if ( $var(calls) > 500 ) {
+      xlog("-------------------- g1 reached over limited calls.\n");
+      send_reply("509","Call over limited");
+      exit;
+    } 
+    else {
+      xlog("-------------------- g1 is performing $var(calls) calls\n");
+      route(call);
+    }
+  }
+}
+
+route[call] {
   if ( $rU=~"((03)[2-9]|(09)[678]|(086)).{7}" )  {
     $avp(lb_res) = "vt";
   } else if ( $rU=~"((09)[03]|(089)|(07)[06-9]).{7}" )  {
@@ -283,64 +298,77 @@ route[ob] {
   #$rU = $(rU{s.substr,2,0});
 
   if (!check_blacklist("userblacklist")) {
-        xlog("-------------------- NOTICE: $rU is blacklisted\n");
-        sl_send_reply("504", "Blacklisted");
-        exit;
+    xlog("-------------------- NOTICE: $rU is blacklisted\n");
+    sl_send_reply("504", "Blacklisted");
+    exit;
   }
 
-  if ( !load_balance("1","$avp(lb_res)") ) {
+  if ( !lb_start("1","$avp(lb_res)","s") ) {
+    xlog("-------------------- ERROR: $ru .Service is full\n");
+    acc_db_request("$avp(lb_res) Service full", "acc");
+    send_reply("488","Service full");
+    exit;
+  }
+
   xlog("-------------------- Selected destination is: <$dd> for <$ru>,<$ci>\n");
   $acc_extra(dst_ip) = $dd;
-  t_on_failure("GW_FAILOVER");
+  t_on_failure("missed_call");
   route(relay);
 }
 
-route[relay] {
+route[relay] {  
   if (is_method("INVITE")) {
-    t_on_branch("handle_nat");
+    t_on_branch("per_branch_ops");  
     t_on_reply("handle_nat");
     t_on_failure("missed_call");
 
-  } else if (is_method("BYE|CANCEL")) {
-    rtpproxy_unforce();
+    if(nat_uac_test("127")) {
+      xlog("we are on route relay, user behind nat");
+      fix_nated_contact();
+    }
+
+    if(has_body("application/sdp")){
+      xlog("we have sdp on this $rm");
+      rtpproxy_offer("nro");
+    }
   }
 
+  if(is_method("CANCEL|BYE")){
+    rtpproxy_unforce();
+  }
+  
   if (!t_relay()) {
     send_reply("500","Internal Error");
   };
   exit;
 }
 
-
 branch_route[per_branch_ops] {
-  xlog("-------------------- new branch at $ru\n");
-}
 
-branch_route[handle_nat] {
-
-  if (!is_method("INVITE") || !has_body("application/sdp"))
-    return;
-  rtpproxy_offer();
+  xlog("new branch at $ru\n"); 
 }
 
 onreply_route[handle_nat] {
 
-  fix_nated_contact();
-  if (!has_body("application/sdp"))
-    return;
+  xlog("incoming reply\n");
+  if(is_method("ACK") && has_body("application/sdp")){
+    rtpproxy_answer("nro");
 
-  rtpproxy_answer();
-}
+  } else if(has_body("application/sdp")){
+    rtpproxy_offer("nro"); 
+  }
 
-
-failure_route[missed_call] {
-    if (t_was_cancelled()) {
-    exit;
+  if(nat_uac_test("127")){
+    
+    xlog("we are on nat handle , user behind nat, fixing contact");
+    fix_nated_contact();
   }
 }
 
-failure_route[GW_FAILOVER] {
+failure_route[missed_call] {
+  
   if (t_was_cancelled()) {
     exit;
   }
+
 }

@@ -77,7 +77,6 @@ opensips_debian_packages:
   - opensips-restclient-module
   - opensips-sctp-module
   - opensips-siprec-module
-  - opensips-snmpstats-module
   - opensips-sqlite-module 
   - opensips-tls-module
   - opensips-wss-module

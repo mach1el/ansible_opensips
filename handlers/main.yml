@@ -1,8 +1,4 @@
 ---
-- name: Restart opensips
-  become: true
-  service: name=opensips state=restarted
-
 - name: Restart rsyslog
   become: true
   service: name=rsyslog state=restarted
@@ -10,3 +6,7 @@
 - name: Restart apache2
   become: true
   service: name=apache2 state=restarted
+
+ - name: Restart opensips
+  become: true
+  service: name=opensips state=restarted

@@ -7,6 +7,6 @@
   become: true
   service: name=apache2 state=restarted
 
- - name: Restart opensips
+- name: Restart opensips
   become: true
   service: name=opensips state=restarted

@@ -223,7 +223,6 @@ route{
   # account only INVITEs
   if (is_method("INVITE")) {
     $acc_extra(src_ip) = $si;
-    $acc_extra(caller) = $fU;
     create_dialog("B");
     do_accounting("db|db", "cdr|missed");
     xlog("-------------------- CALL,$ru,$ci,$fn,$fu\n");

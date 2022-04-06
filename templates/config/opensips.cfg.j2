@@ -116,15 +116,6 @@ modparam("load_balancer", "db_table", "load_balancer")
 modparam("load_balancer", "probing_reply_codes", "501, 503, 403, 404")
 modparam ("load_balancer", "probing_verbose", 1)
 
-#### Proto HEP
-modparam("proto_hep", "hep_id", "[homer] 10.10.90.126:9060;transport=udp;version=3")
-
-#### Sip Trace
-loadmodule "siptrace.so"
-modparam("siptrace", "trace_on", 1)
-# modparam("siptrace", "trace_id","[tid]uri={{ opensips_db_url }};table=sip_trace;")
-modparam("siptrace", "trace_id", "[traceid]uri=hep:homer")
-
 #### RTP PROXY
 loadmodule "rtpproxy.so"
 modparam("rtpproxy", "rtpproxy_sock", "udp:0.0.0.0:7891")

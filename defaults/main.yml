@@ -19,7 +19,7 @@ opensips_conf_dir: "/etc/opensips/"
 opensips_log_path: "/var/log/opensips.log"
 opensips_enable_syslog: true
 opensips_cp_repo: "https://github.com/OpenSIPS/opensips-cp.git"
-opensips_cp_cp_version: "8.2.4"
+opensips_cp_cp_version: "8.3.2"
 opensips_cp_path: "/var/www/html/opensips-cp"
 opensips_apache_dir: "/etc/apache2/"
 opensips_apache_conf_file: "apache2.conf"
@@ -28,13 +28,14 @@ opensips_config_template_dir: "../templates/config/"
 opensips_db_script_file: "create_column.sql"
 opensips_conf_files:
   - opensips.cfg
-  - opensipsctlrc
+  - opensips-cli.conf
 
 opensips_debian_packages:
   - python3
   - python3-pip
   - python3-setuptools
   - python-setuptools
+  - python3-pexpect
   - apache2
   - libapache2-mod-php 
   - php-curl
@@ -51,7 +52,6 @@ opensips_debian_packages:
   - opensips-carrierroute-module
   - opensips-cgrates-module
   - opensips-compression-module
-  - opensips-console
   - opensips-cpl-module
   - opensips-dbhttp-module
   - opensips-dialplan-module
@@ -64,11 +64,13 @@ opensips_debian_packages:
   - opensips-ldap-modules
   - opensips-lua-module
   - opensips-memcached-module
-  - opensips-mysql-module
   - opensips-mongodb-module
+  - opensips-mysql-module
   - opensips-perl-modules
+  - opensips-python-module
   - opensips-postgres-module
   - opensips-presence-modules
+  - opensips-prometheus-module
   - opensips-rabbitmq-modules
   - opensips-radius-modules
   - opensips-redis-module
@@ -76,10 +78,14 @@ opensips_debian_packages:
   - opensips-restclient-module
   - opensips-sctp-module
   - opensips-siprec-module
-  - opensips-sqlite-module 
+  - opensips-snmpstats-module
+  - opensips-sqlite-module
+  - opensips-stir-shaken-module
   - opensips-tls-module
-  - opensips-wss-module
+  - opensips-tls-openssl-module
   - opensips-tlsmgm-module
   - opensips-unixodbc-module
+  - opensips-uuid-module
+  - opensips-wss-module
   - opensips-xmlrpc-module
   - opensips-xmpp-module

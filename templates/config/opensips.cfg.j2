@@ -173,7 +173,6 @@ route{
   # CANCEL processing
   if (is_method("CANCEL")) {
     # sip_trace("traceid","M","sip");
-    xlog("-------------------- REPORT: CANCEL Reply with $T_reply_code\n");
     xlog("L_WARN","-------------------- CANCEL CALL,$ru,$ci,$fn,$fu\n");
     if (t_check_trans()) {
       t_relay();

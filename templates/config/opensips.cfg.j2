@@ -1,194 +1,169 @@
-####### Global Parameters #########
-
 log_level=2
-log_stderror=no
+xlog_level=3
+log_stderror=yes
 log_facility=LOG_LOCAL0
-children=4
+udp_workers=4
 mhomed=1
-auto_aliases=no
 disable_503_translation=yes
+db_default_url={{ opensips_db_url }}
 
-listen=udp:*:5060
-listen=ws:{{ opensips_bind_host }}:8989
-listen=hep_udp:{{ opensips_bind_host }}:9191
+#disable_dns_blacklist=no
+#dns_try_ipv6=yes
+
+#alias=udp:public_ip:5060
+#socket=udp:local_ip:5060 as public_ip:5060
+#advertised_address="public_ip"
+socket=udp:*:5060
+#socket=udp:local_ip:5060 as public_ip:5060
 
 ####### Modules Section ########
 
 #set module path
 mpath="/usr/lib/x86_64-linux-gnu/opensips/modules/"
-
-#### SIGNALING module
+#### LOAD modules ####
+loadmodule "acc.so"
+loadmodule "auth.so"
+loadmodule "db_mysql.so"
+loadmodule "db_postgres.so"
+loadmodule "carrierroute.so"
+loadmodule "dialog.so"
+loadmodule "httpd.so"
+loadmodule "json.so"
+loadmodule "load_balancer.so"
+loadmodule "maxfwd.so"
+loadmodule "nathelper.so"
+loadmodule "mi_http.so"
+loadmodule "mi_fifo.so"
+loadmodule "proto_udp.so"
+loadmodule "proto_ws.so"
+loadmodule "tm.so"
+loadmodule "rr.so"
 loadmodule "signaling.so"
-
-#### StateLess module
+loadmodule "sipmsgops.so"
 loadmodule "sl.so"
+loadmodule "statistics.so"
+loadmodule "usrloc.so"
+loadmodule "rtpproxy.so"
+loadmodule "registrar.so"
+loadmodule "uac.so"
+loadmodule "userblacklist.so"
+loadmodule "prometheus.so"
+
+#### Statstics
+modparam("statistics", "variable", "active_calls/no_reset")
+
+#### Record Route Module
+modparam("rr", "append_fromtag", 1)
+
+#### FIFO Management Interface
+#modparam("mi_fifo", "fifo_name", "/tmp/opensips_fifo")
+#modparam("mi_fifo", "fifo_mode", 0600)
+
+#### Carrierroute
+modparam("carrierroute", "db_table", "carrierroute")
+modparam("carrierroute", "config_source", "db")
+modparam("carrierroute", "config_file", "/etc/opensips/opensips.conf")
 
 #### Transaction Module
-loadmodule "tm.so"
 modparam("tm", "fr_timeout", 5)
 modparam("tm", "fr_inv_timeout", 60)
 modparam("tm", "restart_fr_on_each_reply", 0)
 modparam("tm", "onreply_avp_mode", 1)
 
-#### Record Route Module
-loadmodule "rr.so"
-modparam("rr", "append_fromtag", 0)
-
-#### MAX ForWarD module
-loadmodule "maxfwd.so"
-
-#### SIP MSG OPerationS module
-loadmodule "sipmsgops.so"
-
-#### FIFO Management Interface
-loadmodule "mi_fifo.so"
-modparam("mi_fifo", "fifo_name", "/tmp/opensips_fifo")
-modparam("mi_fifo", "fifo_mode", 0666)
-
-#### URI module
-loadmodule "uri.so"
-modparam("uri", "use_uri_table", 0)
-
 #### USeR LOCation module
-loadmodule "usrloc.so"
 modparam("usrloc", "nat_bflag", "NAT")
 modparam("usrloc", "working_mode_preset", "single-instance-no-db")
 
 #### REGISTRAR module
-loadmodule "registrar.so"
 modparam("registrar", "tcp_persistent_flag", "TCP_PERSISTENT")
-
-#### HTTPD module
-loadmodule "httpd.so"
-modparam("httpd", "port", 8080)
-loadmodule "mi_json.so"
-modparam("mi_json", "mi_json_root", "json")
-loadmodule "mi_http.so"
-modparam("mi_http", "mi_http_method", 1)
-
-#### core module
-loadmodule "auth.so"
-loadmodule "db_mysql.so"
-loadmodule "db_postgres.so"
-loadmodule "json.so"
-loadmodule "proto_udp.so"
-loadmodule "proto_ws.so"
-loadmodule "proto_hep.so"
+#modparam("registrar", "max_contacts", 10)
 
 #### Nathelper protocol
-loadmodule "nathelper.so"
 modparam("registrar|nathelper", "received_avp", "$avp(rcv)")
 
-#### Rest Client
-loadmodule "rest_client.so"
-modparam("rest_client", "curl_timeout", 10)
-modparam("rest_client", "connection_timeout", 5)
-modparam("rest_client", "max_async_transfers", 300)
-modparam("rest_client", "ssl_verifypeer", 0)
-modparam("rest_client", "ssl_verifyhost", 0)
-
-#### Dialog module
-loadmodule "dialog.so"
-modparam("dialog", "db_url","{{ opensips_db_url }}")
-modparam("dialog", "table_name", "dialog")
-modparam("dialog", "enable_stats", 1)
-modparam("dialog", "profiles_with_value","caller")
-modparam("dialog", "dlg_match_mode", 2)
-modparam("dialog", "default_timeout",600)
-modparam("dialog", "db_mode", 1)
-modparam("dialog", "profiles_with_value", "g1; manual; auto; g3; g4")
+#### MI HTTP
+modparam("httpd", "port", 8989)
 
 #### ACCounting module
-loadmodule "acc.so"
 modparam("acc", "early_media", 0)
 modparam("acc", "report_cancels", 1)
 modparam("acc", "detect_direction", 0)
 modparam("acc", "log_level", 2)
-modparam("acc", "db_url","{{ opensips_db_url }}")
 modparam("acc", "db_table_acc", "acc")
 modparam("acc", "db_table_missed_calls", "acc")
 modparam("acc", "extra_fields", "db: src_ip; dst_ip; exten")
 
-#### Load Balancer
-loadmodule "load_balancer.so"
-modparam("load_balancer", "db_url", "{{ opensips_db_url }}")
-modparam("load_balancer", "db_table", "load_balancer")
-modparam("load_balancer", "probing_reply_codes", "501, 503, 403, 404")
-modparam ("load_balancer", "probing_verbose", 1)
+#### Dialog module
+modparam("dialog", "table_name", "dialog")
+modparam("dialog", "enable_stats", 1)
+modparam("dialog", "profiles_with_value","caller")
+modparam("dialog", "dlg_match_mode", 2)
+modparam("dialog", "default_timeout", 1800)
+modparam("dialog", "db_mode", 1)
+modparam("dialog", "profiles_with_value", "devops")
 
-#### RTP PROXY
-loadmodule "rtpproxy.so"
-modparam("rtpproxy", "rtpproxy_sock", "udp:0.0.0.0:7891")
-modparam("rtpproxy", "rtpproxy_autobridge", 1)
+#### Load Balancer
+modparam("load_balancer", "db_table", "load_balancer")
+modparam("load_balancer", "probing_reply_codes", "501,404,403")
+modparam("load_balancer", "probing_verbose", 1)
 
 #### USERBLACKLIST
-loadmodule "userblacklist.so"
-modparam("userblacklist","db_url", "{{ opensips_db_url }}")
 modparam("userblacklist", "db_table", "userblacklist")
 
+#### RTP PROXY
+modparam("rtpproxy", "rtpproxy_sock", "udp:0.0.0.0:7890")
+modparam("rtpproxy", "rtpproxy_autobridge", 1)
+modparam("rtpproxy", "default_set", 1)
+
+#### Prometheus
+modparam("prometheus", "statistics", "active_dialogs load:")
+modparam("prometheus", "statistics", "active_calls:")
 
 ####### Routing Logic ########
 
-# main request routing logic
 route{
-  # script_trace( "traceid", "$rm/$si/f=$fu/r=$ru/$ci/$si", "me");
-  if (!mf_process_maxfwd_header("10")) {
-    xlog("L_WARN", "-------------------- $ci|end|to many hops");
-    send_reply("483","Too Many Hops");
-    exit;
-  }
 
-  if (lookup("location","m")) {
-    xlog("L_WARN","-------------------- [INCOMINGCALL][$rU @ $si:$sp ] Forward call call to <$ru> via <$du>\n");
-    if (!t_relay()) {
-      send_reply("503","Internal Error");
-    };
+  if (!mf_process_maxfwd_header(10)) {
+    send_reply(483,"Too Many Hops");
     exit;
   }
 
   if (has_totag()) {
-    if (loose_route()) {
-      if (is_method("BYE")) {
-        xlog("-------------------- CALL ENDED,$ru,$ci,$fn,$fu\n");
-      } else if (is_method("INVITE")) {
-        record_route();
-      }
-      route(relay);
-    } else {
 
-      if ( is_method("ACK") ) {
-        if ( t_check_trans() ) {
-          t_relay();
-          exit;
-        } else {
-          exit;
-        }
-      }
-      sl_send_reply("404","Not here");
+    if ( is_method("ACK") && t_check_trans() ) {
+      t_relay();
+      exit;
     }
+
+    if ( !loose_route() ) {
+      send_reply(404,"Not here");
+      exit;
+    }
+
+    if (is_method("BYE")) {
+      xlog("-------------------- CALL ENDED,$ru,$ci,$fn,$fu\n");
+    }
+
+    route(relay);
     exit;
   }
 
-
-  # CANCEL processing
   if (is_method("CANCEL")) {
-    # sip_trace("traceid","M","sip");
-    xlog("L_WARN","-------------------- CANCEL CALL,$ru,$ci,$fn,$fu\n");
-    if (t_check_trans()) {
+    if (t_check_trans())
       t_relay();
-    }
     exit;
   }
 
   t_check_trans();
 
   if ( !(is_method("REGISTER")  ) ) {
+    
     if (is_myself("$fd")) {
-
+          
     } else {
-
+      
       if (!is_myself("$rd")) {
-        send_reply("403","Relay Forbidden");
+        send_reply(403,"Relay Forbidden");
         exit;
       }
     }
@@ -196,90 +171,90 @@ route{
   }
 
   if (loose_route()) {
-    xlog("L_ERR","-------------------- Attempt to route with preloaded Route's [$fu/$tu/$ru/$ci]\n");
-
-    if (!is_method("ACK")) {
-      xlog("-------------------- REPORT: ACK Reply with $T_reply_code\n");
-      xlog("L_WARN", "-------------------- $ru|end|initial request contained a preloaded route set\n");
-      send_reply("403","Preload Route denied");
-      exit;
-    }
+    xlog("L_ERR","-------------------- Attempt to route with preloaded Route's [$fu/$tu/$ru/$ci]");
+    if (!is_method("ACK"))
+      send_reply(403,"Preload Route denied");
+    exit;
   }
 
-  # record routing
   if (!is_method("REGISTER|MESSAGE"))
     record_route();
 
-  # account only INVITEs
   if (is_method("INVITE")) {
+    #set_advertised_address("144.48.25.65");
     $acc_extra(src_ip) = $si;
     create_dialog("B");
-    do_accounting("db|db", "cdr|missed");
+    do_accounting("db|db","cdr|missed");
     xlog("-------------------- CALL,$ru,$ci,$fn,$fu\n");
     route(limit);
   }
-
+  
   if (!is_myself("$rd")) {
-    append_hf("P-hint: outbound\r\n");
+    append_hf("P-hint: outbound\r\n"); 
     route(relay);
   }
-
-  # requests for my domain
+  
   if (is_method("PUBLISH|SUBSCRIBE")) {
-    send_reply("503", "Service Unavailable");
+    send_reply(503, "Service Unavailable");
     exit;
   }
 
   if (is_method("REGISTER")) {
     if (!save("location"))
-      sl_reply_error();
+      xlog("failed to register AoR $tu\n");
     exit;
   }
 
-  if ($rU==NULL) {
-    send_reply("484","Address Incomplete");
-    exit;
+  if ($rU==NULL)  {
+    if ($si == "10.10.94.123") {
+      t_reply(200,"OK");
+      exit;
+    }
+    else {
+      send_reply(484,"Address Incomplete");
+      exit;
+    }
   }
 
-  # do lookup with method filtering
   if (!lookup("location","m")) {
-    t_reply("404", "Not Found");
+    t_reply(404, "Not Found");
     exit;
   }
 
-  if (t_check_status("480")) {
-    xlog("-------------------- Call over limits\n");
-    t_relay();
-  }
-
-  exit;
+  do_accounting("log","missed");
+  #route(relay);
 }
 
 route[limit] {
-  if ( $si == "10.10.94.123" )  {
-    #$var(group) = 1;
-    set_dlg_profile("g1","$si");
-    get_profile_size("g1","$si","$var(calls)");
-    if ( $var(calls) > 500 ) {
-      xlog("-------------------- g1 reached over limited calls.\n");
-      send_reply("509","Call over limited");
+  if ( $si == "10.10.94.123" ) {
+    $var(group) = 1;
+    set_dlg_profile("devops",$si);
+    get_profile_size("devops",$si,$var(calls));
+    if ( $var(calls) > 100 ) {
+      xlog("-------------------- devops reached over limited calls.\n");
+      send_reply(509,"Call over limited");
       exit;
     } 
     else {
-      xlog("-------------------- g1 is performing $var(calls) calls\n");
-      route(call);
+      xlog("-------------------- devops is performing $var(calls) calls\n");
+      route(ob);
     }
   }
 }
 
-route[call] {
-  if ( $rU=~"((03)[2-9]|(09)[678]|(086)).{7}" )  {
+route[ob] {
+  if ( $rU=~"((03)[2-9]|(09)[678]|(086)).{7}" ) {
     $avp(lb_res) = "vt";
-  } else if ( $rU=~"((09)[03]|(089)|(07)[06-9]).{7}" )  {
+  } else if ( $rU=~"((09)[03]|(089)|(07)[06-9]).{7}" ) {
     $avp(lb_res) = "mb";
+  } else if ( $rU=~"((08)[1-58]|(09)[14]).{7}" ) {
+    $avp(lb_res) = "vn";
+  } else if ( $rU=~"((09)[29]|(05)[2689]).{7}" ) {
+    $avp(lb_res) = "other";
   }
+
   else {
-    send_reply("403","Destination not found");
+    send_reply(403,"Destination not found");
     exit;
   }
   
@@ -288,14 +263,16 @@ route[call] {
 
   if (!check_blacklist("userblacklist")) {
     xlog("-------------------- NOTICE: $rU is blacklisted\n");
-    sl_send_reply("504", "Blacklisted");
+    acc_db_request("Blacklisted", "acc");
+    sl_send_reply(504, "Blacklisted");
     exit;
   }
 
-  if ( !lb_start("1","$avp(lb_res)","s") ) {
-    xlog("-------------------- ERROR: $ru .Service is full\n");
+  if ( !lb_start($var(group),$avp(lb_res),"s") ) {
+    xlog("-------------------- REPORT: LB failed with code $T_reply_code .Service is full\n");
+    do_accounting("log");
     acc_db_request("$avp(lb_res) Service full", "acc");
-    send_reply("488","Service full");
+    send_reply(488,"Service full");
     exit;
   }
 
@@ -305,59 +282,59 @@ route[call] {
   route(relay);
 }
 
-route[relay] {  
+route[relay] {
   if (is_method("INVITE")) {
-    t_on_branch("per_branch_ops");  
+    t_on_branch("per_branch_ops");
     t_on_reply("handle_nat");
     t_on_failure("missed_call");
-
-    if(nat_uac_test("127")) {
-      xlog("we are on route relay, user behind nat");
+    
+    #set_advertised_address("144.48.25.65");
+    if(nat_uac_test(127)) {
+      xlog("Fixing nat contact\n");
       fix_nated_contact();
     }
-
-    if(has_body("application/sdp")){
-      xlog("we have sdp on this $rm");
-      rtpproxy_offer("nro");
+ 
+    if(has_body("application/sdp")) {
+      xlog("----- we have sdp on this $rm\n");
+      rtpproxy_offer();
     }
   }
-
-  if(is_method("CANCEL|BYE")){
+  
+  if (is_method("BYE|CANCEL")) {
     rtpproxy_unforce();
   }
-  
+
   if (!t_relay()) {
-    send_reply("500","Internal Error");
+    send_reply(500,"Internal Error");
   };
+  
   exit;
 }
 
 branch_route[per_branch_ops] {
-
-  xlog("new branch at $ru\n"); 
+  xlog("-------------------- new branch at $ru\n");
 }
 
 onreply_route[handle_nat] {
+  if(is_method("ACK") && has_body("application/sdp")) {
+    
+    rtpproxy_answer();
 
-  xlog("incoming reply\n");
-  if(is_method("ACK") && has_body("application/sdp")){
-    rtpproxy_answer("nro");
-
-  } else if(has_body("application/sdp")){
-    rtpproxy_offer("nro"); 
+  } else if(has_body("application/sdp")) {
+    
+    rtpproxy_offer(); 
   }
 
-  if(nat_uac_test("127")){
+  if(nat_uac_test(127)) {
     
-    xlog("we are on nat handle , user behind nat, fixing contact");
+    xlog("we are on nat handle , user behind nat, fixing contact\n");
     fix_nated_contact();
   }
+
 }
 
 failure_route[missed_call] {
-  
-  if (t_was_cancelled()) {
+    if (t_was_cancelled()) {
     exit;
   }
-
 }

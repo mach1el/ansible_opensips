@@ -26,16 +26,16 @@ if (!isset($config)) $config = new stdClass();
  $config->db_driver = "pgsql";  
 
  //database host
- $config->db_host = "{{ opensips_db_host }}";
+ $config->db_host = "localhost";
  
  //database port - leave empty for default
  $config->db_port = "5432";
  
  //database connection user
- $config->db_user = "postgres";
+ $config->db_user = "opensips";
  
  //database connection password
- $config->db_pass = "postgres";
+ $config->db_pass = "opensipsrw";
  
  //database name
  $config->db_name = "opensips";
